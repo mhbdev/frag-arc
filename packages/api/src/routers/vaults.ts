@@ -1,7 +1,34 @@
 import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { account } from "@frag-arc/db/schema/auth";
 import { buyoutBids, vaults } from "@frag-arc/db/schema/vaults";
-import { publicProcedure, router } from "../index";
+import type { Context } from "../context";
+import { protectedProcedure, publicProcedure, router } from "../index";
+
+const addressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid EVM address");
+const txHashSchema = z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Invalid transaction hash");
+
+async function assertSessionOwnsWallet(
+  ctx: Context & { session: NonNullable<Context["session"]> },
+  address: string,
+) {
+  const linkedAccounts = await ctx.db
+    .select({ accountId: account.accountId })
+    .from(account)
+    .where(eq(account.userId, ctx.session.user.id));
+
+  if (
+    !linkedAccounts.some(
+      (linked) => linked.accountId.toLowerCase() === address.toLowerCase(),
+    )
+  ) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Sign in with the wallet that owns this on-chain action.",
+    });
+  }
+}
 
 export const vaultsRouter = router({
   list: publicProcedure
@@ -73,12 +100,12 @@ export const vaultsRouter = router({
       };
     }),
 
-  register: publicProcedure
+  register: protectedProcedure
     .input(
       z.object({
-        vaultAddress: z.string(),
-        tokenAddress: z.string(),
-        nftContract: z.string(),
+        vaultAddress: addressSchema,
+        tokenAddress: addressSchema,
+        nftContract: addressSchema,
         tokenId: z.string(),
         tokenAmount: z.string().default("1"),
         tokenType: z.enum(["ERC721", "ERC1155"]).default("ERC721"),
@@ -86,15 +113,17 @@ export const vaultsRouter = router({
         symbol: z.string(),
         totalSupply: z.string(),
         reservePrice: z.string(),
-        curatorAddress: z.string(),
+        curatorAddress: addressSchema,
         nftName: z.string().optional(),
         nftImage: z.string().optional(),
         nftDescription: z.string().optional(),
-        txHash: z.string().optional(),
-        chainId: z.number().default(5042002),
+        txHash: txHashSchema.optional(),
+        chainId: z.union([z.literal(5042002), z.literal(5042)]).default(5042002),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      await assertSessionOwnsWallet(ctx, input.curatorAddress);
+
       const normalizedVault = input.vaultAddress.toLowerCase();
       const normalizedToken = input.tokenAddress.toLowerCase();
       const normalizedNft = input.nftContract.toLowerCase();
@@ -137,17 +166,19 @@ export const vaultsRouter = router({
       return newVault;
     }),
 
-  recordBid: publicProcedure
+  recordBid: protectedProcedure
     .input(
       z.object({
-        vaultAddress: z.string(),
-        bidder: z.string(),
+        vaultAddress: addressSchema,
+        bidder: addressSchema,
         amount: z.string(),
-        txHash: z.string().optional(),
+        txHash: txHashSchema.optional(),
         auctionEndTime: z.number().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      await assertSessionOwnsWallet(ctx, input.bidder);
+
       const normalizedVault = input.vaultAddress.toLowerCase();
       const normalizedBidder = input.bidder.toLowerCase();
 
@@ -177,15 +208,26 @@ export const vaultsRouter = router({
       return { success: true };
     }),
 
-  updateStatus: publicProcedure
+  updateStatus: protectedProcedure
     .input(
       z.object({
-        vaultAddress: z.string(),
+        vaultAddress: addressSchema,
         status: z.enum(["ACTIVE", "AUCTION", "REDEEMED", "BOUGHT_OUT"]),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const normalizedVault = input.vaultAddress.toLowerCase();
+      const [vault] = await ctx.db
+        .select({ curatorAddress: vaults.curatorAddress })
+        .from(vaults)
+        .where(eq(vaults.vaultAddress, normalizedVault))
+        .limit(1);
+
+      if (!vault) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Vault not found." });
+      }
+      await assertSessionOwnsWallet(ctx, vault.curatorAddress);
+
       await ctx.db
         .update(vaults)
         .set({ status: input.status })

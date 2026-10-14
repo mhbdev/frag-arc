@@ -113,6 +113,15 @@ bun run --cwd packages/db db:migrate
 bun run --cwd packages/contracts test
 ```
 
+### Mainnet deployment safety
+
+The contract deployment script deploys the `MockArcNFT` demo asset only on Arc
+Testnet. On Arc Mainnet it deploys the `NFTVaultFactory` only; production users
+must supply NFTs they own. Configure `NEXT_PUBLIC_ARC_MAINNET_FACTORY` only
+after the factory deployment has been tested, verified, and its owner is a
+controlled wallet or Safe. Arc Mainnet uses native USDC for gas, with 18
+decimals at the native-value layer.
+
 ### 5. Launch Development Server
 
 ```bash

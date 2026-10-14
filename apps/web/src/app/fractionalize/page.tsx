@@ -6,7 +6,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { parseEther, parseGwei } from "viem";
+import { isAddress, parseEther, parseGwei } from "viem";
 import {
   Sparkles,
   ArrowRight,
@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import {
   NFTVaultFactoryABI,
+  NFTVaultABI,
   MockArcNFTABI,
   ARC_CONTRACTS,
   ARC_DEFAULT_GAS_FLOOR,
@@ -48,6 +49,7 @@ export default function FractionalizePage() {
   const [nftContract, setNftContract] = React.useState("");
   const [tokenId, setTokenId] = React.useState("");
   const [tokenType, setTokenType] = React.useState<"ERC721" | "ERC1155">("ERC721");
+  const [tokenAmount, setTokenAmount] = React.useState("1");
   const [tokenName, setTokenName] = React.useState("");
   const [tokenSymbol, setTokenSymbol] = React.useState("");
   const [totalSupply, setTotalSupply] = React.useState("1000000");
@@ -70,7 +72,7 @@ export default function FractionalizePage() {
   const factoryAddress = contractsConfig.factoryAddress;
 
   const handleSelectDemoPreset = (preset: NonNullable<typeof demoNFTs>[number]) => {
-    if (!preset) return;
+    if (!preset || chain?.id !== arcTestnet.id || !contractsConfig.mockNftAddress) return;
     setNftContract(contractsConfig.mockNftAddress);
     setTokenId(preset.id.toString());
     setTokenName(preset.name);
@@ -83,22 +85,27 @@ export default function FractionalizePage() {
   const checkApproval = React.useCallback(async () => {
     if (!publicClient || !address || !nftContract || !tokenId) return;
     try {
-      const approvedAddress = (await publicClient.readContract({
-        address: nftContract as `0x${string}`,
-        abi: MockArcNFTABI,
-        functionName: "getApproved",
-        args: [BigInt(tokenId)],
-      })) as string;
-
-      if (approvedAddress.toLowerCase() === factoryAddress.toLowerCase()) {
-        setIsApproved(true);
+      if (tokenType === "ERC1155") {
+        const approvedForAll = await publicClient.readContract({
+          address: nftContract as `0x${string}`,
+          abi: MockArcNFTABI,
+          functionName: "isApprovedForAll",
+          args: [address, factoryAddress],
+        });
+        setIsApproved(approvedForAll);
       } else {
-        setIsApproved(false);
+        const approvedAddress = (await publicClient.readContract({
+          address: nftContract as `0x${string}`,
+          abi: MockArcNFTABI,
+          functionName: "getApproved",
+          args: [BigInt(tokenId)],
+        })) as string;
+        setIsApproved(approvedAddress.toLowerCase() === factoryAddress.toLowerCase());
       }
     } catch {
       setIsApproved(false);
     }
-  }, [publicClient, address, nftContract, tokenId, factoryAddress]);
+  }, [publicClient, address, nftContract, tokenId, tokenType, factoryAddress]);
 
   React.useEffect(() => {
     if (step === 3) {
@@ -114,14 +121,24 @@ export default function FractionalizePage() {
     setIsApproving(true);
     try {
       toast.info("Approving NFT transfer to Vault Factory...");
-      const hash = await walletClient.writeContract({
-        address: nftContract as `0x${string}`,
-        abi: MockArcNFTABI,
-        functionName: "approve",
-        args: [factoryAddress, BigInt(tokenId)],
-        maxFeePerGas: ARC_DEFAULT_GAS_FLOOR,
-        maxPriorityFeePerGas: parseGwei("2"),
-      });
+      const hash =
+        tokenType === "ERC1155"
+          ? await walletClient.writeContract({
+              address: nftContract as `0x${string}`,
+              abi: MockArcNFTABI,
+              functionName: "setApprovalForAll",
+              args: [factoryAddress, true],
+              maxFeePerGas: ARC_DEFAULT_GAS_FLOOR,
+              maxPriorityFeePerGas: parseGwei("2"),
+            })
+          : await walletClient.writeContract({
+              address: nftContract as `0x${string}`,
+              abi: MockArcNFTABI,
+              functionName: "approve",
+              args: [factoryAddress, BigInt(tokenId)],
+              maxFeePerGas: ARC_DEFAULT_GAS_FLOOR,
+              maxPriorityFeePerGas: parseGwei("2"),
+            });
 
       await publicClient.waitForTransactionReceipt({ hash });
       setIsApproved(true);
@@ -139,6 +156,22 @@ export default function FractionalizePage() {
       toast.error("Please connect your wallet first");
       return;
     }
+    if (!chain || (chain.id !== arcTestnet.id && chain.id !== arcMainnet.id)) {
+      toast.error("Switch your wallet to Arc Testnet or Arc Mainnet first.");
+      return;
+    }
+    if (factoryAddress === "0x0000000000000000000000000000000000000000") {
+      toast.error("Vault creation is not enabled on this Arc network yet.");
+      return;
+    }
+    if (!isAddress(nftContract)) {
+      toast.error("Enter a valid NFT contract address.");
+      return;
+    }
+    if (tokenType === "ERC1155" && BigInt(tokenAmount || "0") <= 0n) {
+      toast.error("Enter a valid ERC-1155 token amount.");
+      return;
+    }
     setIsCreating(true);
     try {
       toast.info("Creating Vault on Arc Network...");
@@ -154,8 +187,8 @@ export default function FractionalizePage() {
         args: [
           nftContract as `0x${string}`,
           BigInt(tokenId),
-          1n,
-          0,
+          tokenType === "ERC1155" ? BigInt(tokenAmount) : 1n,
+          tokenType === "ERC1155" ? 1 : 0,
           tokenName,
           tokenSymbol,
           initialSupplyWei,
@@ -184,13 +217,24 @@ export default function FractionalizePage() {
         deployedVault = allVaults[allVaults.length - 1] || "";
       }
 
+      if (!deployedVault) {
+        throw new Error("Vault deployment succeeded but no vault address was emitted.");
+      }
+
+      const deployedFractionToken = (await publicClient.readContract({
+        address: deployedVault as `0x${string}`,
+        abi: NFTVaultABI,
+        functionName: "fractionToken",
+      })) as `0x${string}`;
+
       setCreatedVaultAddress(deployedVault);
 
       await registerVaultMutation.mutateAsync({
         vaultAddress: deployedVault,
-        tokenAddress: deployedVault,
+        tokenAddress: deployedFractionToken,
         nftContract,
         tokenId,
+        tokenAmount: tokenType === "ERC1155" ? tokenAmount : "1",
         tokenType,
         name: tokenName,
         symbol: tokenSymbol,
@@ -272,7 +316,7 @@ export default function FractionalizePage() {
           </CardHeader>
 
           <CardContent className="flex flex-col gap-5">
-            {demoNFTs && demoNFTs.length > 0 && (
+            {chain?.id === arcTestnet.id && demoNFTs && demoNFTs.length > 0 && (
               <div className="flex flex-col gap-2 p-3.5 rounded-xl bg-muted/40 border border-border/50">
                 <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <Coins className="size-3.5 text-primary" />
@@ -334,6 +378,24 @@ export default function FractionalizePage() {
                   className="font-mono text-xs rounded-xl"
                 />
               </div>
+
+              {tokenType === "ERC1155" && (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="tokenAmount" className="text-xs">
+                    Token Amount
+                  </Label>
+                  <Input
+                    id="tokenAmount"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="e.g. 1"
+                    value={tokenAmount}
+                    onChange={(e) => setTokenAmount(e.target.value)}
+                    className="font-mono text-xs rounded-xl"
+                  />
+                </div>
+              )}
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="tokenType" className="text-xs">

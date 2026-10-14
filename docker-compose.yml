@@ -11,12 +11,12 @@ services:
     ports:
       - "3001:3001"
     env_file:
-      - path: apps/web/.env
+      - path: .env
         required: false
     environment:
-      BETTER_AUTH_URL: http://localhost:3001
-      CORS_ORIGIN: http://localhost:3001
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/frag-arc
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3001}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/frag-arc}
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,4 +58,4 @@ volumes:
 # BuildKit makes these available only while install/build commands run.
 secrets:
   web_env:
-    file: apps/web/.env
+    file: .env
