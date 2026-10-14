@@ -9,9 +9,9 @@
     "check-types": "tsc --noEmit",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:deploy": "drizzle-kit migrate",
+    "db:migrate:deploy": "node src/migrate.mjs",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "node src/migrate.mjs"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

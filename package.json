@@ -36,6 +36,7 @@
     "db:studio": "turbo run db:studio -F @frag-arc/db --",
     "db:generate": "turbo run db:generate -F @frag-arc/db --",
     "db:migrate": "turbo run db:migrate -F @frag-arc/db --",
+    "generate:dokploy-env": "bun scripts/generate-dokploy-env.ts",
     "db:start": "docker compose up -d postgres",
     "db:watch": "docker compose up postgres",
     "db:stop": "docker compose stop postgres",

@@ -14,12 +14,18 @@ services:
       - path: .env
         required: false
     environment:
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-frag-arc-production-auth-secret-change-me-in-dokploy-32chars}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3001}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/frag-arc}
+      NEXT_PUBLIC_ARC_TESTNET_FACTORY: ${NEXT_PUBLIC_ARC_TESTNET_FACTORY:-0x364860b76927D48Fa5a855b5501B057C95d3F376}
+      NEXT_PUBLIC_ARC_TESTNET_MOCK_NFT: ${NEXT_PUBLIC_ARC_TESTNET_MOCK_NFT:-0x789b783f982885994f5756C30e840a12Ec71d79B}
+      NEXT_PUBLIC_ARC_MAINNET_FACTORY: ${NEXT_PUBLIC_ARC_MAINNET_FACTORY:-0x0000000000000000000000000000000000000000}
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -31,8 +37,26 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
     restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      secrets:
+        - web_env
+    init: true
+    command: ["node", "/app/apps/web/migrate.mjs"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/frag-arc}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   postgres:
     image: postgres:18

@@ -6,6 +6,14 @@ COPY . .
 RUN --mount=type=secret,id=web_env,target=/app/apps/web/.env.local --mount=type=cache,target=/root/.bun/install/cache bun install
 
 ENV NODE_ENV=production
+
+# Build-time dummy environment variables to satisfy Varlock during static compilation
+# when BuildKit secrets are not passed by Dokploy/CI.
+# Real credentials are provided at runtime in the runner stage.
+ENV BETTER_AUTH_SECRET="build_placeholder_secret_min_32_characters_long"
+ENV BETTER_AUTH_URL="http://localhost:3001"
+ENV DATABASE_URL="postgresql://postgres:password@localhost:5432/frag-arc"
+
 RUN --mount=type=secret,id=web_env,target=/app/apps/web/.env.local cd apps/web && bun run build && rm -f .next/standalone/.env* .next/standalone/apps/web/.env*
 # standalone output excludes public/; ensure it exists so the runner copy never fails
 RUN mkdir -p apps/web/public
@@ -21,9 +29,17 @@ COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/web/.env.schema ./apps/web/.env.schema
 
+# Copy migration runner, migration SQL files, and entrypoint
+COPY --from=builder /app/packages/db/src/migrate.mjs ./apps/web/migrate.mjs
+COPY --from=builder /app/packages/db/src/migrate.mjs ./migrate.mjs
+COPY --from=builder /app/packages/db/src/migrations ./apps/web/migrations
+COPY --from=builder /app/packages/db/src/migrations ./packages/db/src/migrations
+COPY --from=builder /app/apps/web/entrypoint.sh ./apps/web/entrypoint.sh
+RUN chmod +x ./apps/web/entrypoint.sh
+
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3001
 EXPOSE 3001
 
 WORKDIR /app/apps/web
-CMD ["node", "--import", "varlock/auto-load", "server.js"]
+ENTRYPOINT ["./entrypoint.sh"]

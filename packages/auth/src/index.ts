@@ -21,12 +21,35 @@ export function createAuth(env: AuthConfig, database: Database) {
     // fallback
   }
 
+  const trustedOrigins = [env.BETTER_AUTH_URL];
+  try {
+    const originUrl = new URL(env.BETTER_AUTH_URL).origin;
+    if (!trustedOrigins.includes(originUrl)) {
+      trustedOrigins.push(originUrl);
+    }
+  } catch {
+    // fallback
+  }
+
+  if (process.env.CORS_ORIGIN) {
+    try {
+      const corsOrigin = new URL(process.env.CORS_ORIGIN).origin;
+      if (!trustedOrigins.includes(corsOrigin)) {
+        trustedOrigins.push(corsOrigin);
+      }
+    } catch {
+      if (!trustedOrigins.includes(process.env.CORS_ORIGIN)) {
+        trustedOrigins.push(process.env.CORS_ORIGIN);
+      }
+    }
+  }
+
   return betterAuth({
     database: drizzleAdapter(database, {
       provider: "pg",
       schema,
     }),
-    trustedOrigins: [env.BETTER_AUTH_URL],
+    trustedOrigins,
     emailAndPassword: { enabled: true },
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,

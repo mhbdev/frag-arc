@@ -153,6 +153,40 @@ frag-arc/
 
 ---
 
+## Dokploy & Production Deployment
+
+FragArc is pre-configured for automated, zero-downtime deployment on **Dokploy** using either Docker Compose or a standalone Dockerfile.
+
+### 1. Automated Migrations on Startup
+
+The production Docker container (`apps/web/Dockerfile`) embeds an intelligent entrypoint (`entrypoint.sh`) and standalone transactional migration runner (`migrate.mjs`). On every container start or deployment:
+1. It waits for PostgreSQL to become ready (up to 15 retries with backoff).
+2. It verifies the `"drizzle"."__drizzle_migrations"` table.
+3. It automatically executes any pending migrations in an atomic SQL transaction before starting the Next.js server.
+4. Tables (`vaults`, `account`, `user`, etc.) and indexes are guaranteed to exist before incoming traffic is served.
+
+### 2. Dokploy Environment Variables
+
+To generate a ready-to-paste Dokploy environment template with freshly generated secrets:
+
+```bash
+bun run generate:dokploy-env
+```
+
+Key environment variables to configure in your Dokploy project:
+
+| Variable | Description | Example / Default |
+|---|---|---|
+| `NODE_ENV` | Runtime environment | `production` |
+| `BETTER_AUTH_SECRET` | 32+ char secret for session signatures | Random base64 string |
+| `BETTER_AUTH_URL` | Public production URL of the web app | `https://fragarc.upstand.dev` |
+| `CORS_ORIGIN` | Allowed cross-origin domain | `https://fragarc.upstand.dev` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:password@postgres:5432/frag-arc` |
+| `NEXT_PUBLIC_ARC_TESTNET_FACTORY` | Deployed Arc Testnet Vault Factory | `0x364860b76927D48Fa5a855b5501B057C95d3F376` |
+| `NEXT_PUBLIC_ARC_TESTNET_MOCK_NFT` | Deployed Arc Testnet Demo Collection | `0x789b783f982885994f5756C30e840a12Ec71d79B` |
+
+---
+
 ## License
 
 MIT
