@@ -1,0 +1,3 @@
+{
+  "extends": "@frag-arc/config/tsconfig.base.json"
+}

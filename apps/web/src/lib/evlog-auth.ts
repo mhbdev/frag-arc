@@ -1,0 +1,14 @@
+import { createAuthMiddleware, type BetterAuthInstance } from "evlog/better-auth";
+
+import { useLogger } from "@/lib/evlog";
+
+import { auth } from "../services";
+
+const identifyUser = createAuthMiddleware(auth as BetterAuthInstance, {
+  exclude: ["/api/auth/**"],
+  maskEmail: true,
+});
+
+export async function identifyEvlogUser(request: Request) {
+  await identifyUser(useLogger(), request.headers, new URL(request.url).pathname);
+}
