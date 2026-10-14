@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "frag-arc",
-    short_name: "frag-arc",
-    description: "my pwa app",
+    name: "FragArc - Decentralized NFT Fragmentation",
+    short_name: "FragArc",
+    description: "Bidirectional NFT Fragmentation & Buyout Auction Platform on Circle's Arc Network",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

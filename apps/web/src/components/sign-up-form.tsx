@@ -9,6 +9,7 @@ import z from "zod";
 import { authClient } from "@/lib/auth-client";
 
 import Loader from "./loader";
+import { FragArcLogo } from "./fragarc-logo";
 
 export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
   const router = useRouter();
@@ -52,8 +53,9 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
   }
 
   return (
-    <div className="mx-auto w-full mt-10 max-w-md p-6">
-      <h1 className="mb-6 text-center text-3xl font-bold">Create Account</h1>
+    <div className="mx-auto w-full mt-10 max-w-md p-6 flex flex-col items-center">
+      <FragArcLogo size="xl" withGlow={true} className="mb-3" />
+      <h1 className="mb-6 text-center text-3xl font-bold">Create FragArc Account</h1>
 
       <form
         onSubmit={(e) => {

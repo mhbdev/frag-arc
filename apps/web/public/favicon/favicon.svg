@@ -1,6 +1,83 @@
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="92" height="92"><svg width="92" height="92" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="8" y="8" width="76" height="76" rx="12" fill="#F5EEFF" stroke="#B79AFF" stroke-width="3"></rect>
-  <text x="46" y="56" text-anchor="middle" font-family="monospace" font-size="40" fill="#8F5BFF">$<tspan dx="0" dy="0">_</tspan></text>
-</svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
-@media (prefers-color-scheme: dark) { :root { filter: none; } }
-</style></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <!-- Dark modern background gradient -->
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0c1222" />
+      <stop offset="100%" stop-color="#050811" />
+    </radialGradient>
+    
+    <!-- Neon cyan to violet arc gradient -->
+    <linearGradient id="arcGrad" x1="10%" y1="90%" x2="90%" y2="10%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="45%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+
+    <!-- Bevel / Rim highlight -->
+    <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cffafe" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0.4" />
+    </linearGradient>
+
+    <!-- Crystal shard gradient 1 -->
+    <linearGradient id="shardGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+
+    <!-- Crystal shard gradient 2 -->
+    <linearGradient id="shardGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a5f3fc" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+
+    <!-- Glow filter -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background rounded pill -->
+  <rect width="100" height="100" rx="24" fill="url(#bgGlow)" />
+
+  <!-- Outer ambient glow ring -->
+  <circle cx="50" cy="50" r="32" stroke="url(#arcGrad)" stroke-width="12" stroke-opacity="0.25" filter="url(#neonGlow)" />
+
+  <!-- Main Arc Ring (partial arc with opening at top-right for fragments) -->
+  <path
+    d="M 58 19 A 32 32 0 1 0 76 60"
+    fill="none"
+    stroke="url(#arcGrad)"
+    stroke-width="11"
+    stroke-linecap="round"
+  />
+
+  <!-- Inner bevel arc -->
+  <path
+    d="M 56 22 A 28 28 0 1 0 72 58"
+    fill="none"
+    stroke="url(#rimGrad)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    opacity="0.75"
+  />
+
+  <!-- Crystalline Fragment Shards (breaking out toward upper right) -->
+  <!-- Shard 1: Top primary facet -->
+  <polygon points="62,15 72,18 69,27 59,23" fill="url(#shardGrad2)" />
+  <polygon points="62,15 69,27 65,28" fill="#0284c7" opacity="0.6" />
+
+  <!-- Shard 2: Mid-right floating prism -->
+  <polygon points="73,23 80,28 77,39 70,33" fill="url(#shardGrad1)" />
+  <polygon points="73,23 77,39 74,38" fill="#38bdf8" opacity="0.8" />
+
+  <!-- Shard 3: Outer trailing small shard -->
+  <polygon points="81,34 86,41 83,46 79,40" fill="url(#shardGrad2)" />
+
+  <!-- Shard 4: Lower connecting shard -->
+  <polygon points="78,44 85,51 81,59 75,52" fill="url(#shardGrad1)" />
+</svg>
