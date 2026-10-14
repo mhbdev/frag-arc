@@ -5,6 +5,13 @@ echo "[frag-arc] ======================================="
 echo "[frag-arc] FragArc Production Container Starting"
 echo "[frag-arc] ======================================="
 
+# If an explicit command was passed (e.g., migrate container running node migrate.mjs)
+if [ "$#" -gt 0 ]; then
+  echo "[frag-arc] Running custom command: $@"
+  exec "$@"
+fi
+
+# Default server startup flow: ensure migrations run before launching Next.js
 if [ -n "$DATABASE_URL" ]; then
   echo "[frag-arc] DATABASE_URL detected. Running migration checks..."
   if [ -f "/app/apps/web/migrate.mjs" ]; then
@@ -20,10 +27,5 @@ else
   echo "[frag-arc] WARNING: DATABASE_URL not set. Skipping migration."
 fi
 
-if [ "$#" -gt 0 ]; then
-  echo "[frag-arc] Executing custom command: $@"
-  exec "$@"
-else
-  echo "[frag-arc] Launching Next.js server on port ${PORT:-3001}..."
-  exec node --import varlock/auto-load server.js
-fi
+echo "[frag-arc] Launching Next.js server on port ${PORT:-3001}..."
+exec node --import varlock/auto-load server.js
