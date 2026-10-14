@@ -1,129 +1,149 @@
-# frag-arc
+<div align="center">
+  <img src="apps/web/public/logo.png" width="128" height="128" alt="FragArc Logo" style="border-radius: 28px; box-shadow: 0 0 40px rgba(6,182,212,0.4);" />
+  <h1>FragArc</h1>
+  <p><strong>Bidirectional Decentralized NFT Fragmentation Platform on Circle's Arc Network</strong></p>
+  <p>
+    <img src="https://img.shields.io/badge/Network-Arc_Network_L1-blue?style=flat-square" alt="Network" />
+    <img src="https://img.shields.io/badge/Gas_Token-Native_USDC_(18_decimals)-green?style=flat-square" alt="Gas Token" />
+    <img src="https://img.shields.io/badge/EVM-Osaka_/_Cancun-purple?style=flat-square" alt="EVM" />
+    <img src="https://img.shields.io/badge/Theme-shadcn_preset_b2WzGlo5Q-violet?style=flat-square" alt="Preset" />
+  </p>
+</div>
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Next.js, Self, TRPC, and more.
+---
 
-## Features
+## Overview
 
-- **TypeScript** - For type safety and improved developer experience
-- **Next.js** - Full-stack React framework
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **tRPC** - End-to-end type-safe APIs
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
-- **PWA** - Progressive Web App support
-- **Turborepo** - Optimized monorepo build system
+**FragArc** is a production-ready, fully decentralized bidirectional NFT fragmentation platform engineered specifically for **Circle's Arc Network** (Osaka EVM Layer 1 with native 18-decimal USDC).
+
+Collectibles (ERC-721 and ERC-1155) can be deposited into autonomous `NFTVault` smart contracts to mint liquid ERC-20 `FractionToken`s. NFTs can be reconstituted and redeemed through two decentralized, bidirectional pathways:
+
+1. **Path 1: 100% Direct Token Redemption**: Any collector holding 100% of a vault's fractional supply can call `redeem()` to permanently burn all fraction tokens via `vaultBurn()` and withdraw the custodial NFT immediately.
+2. **Path 2: Native USDC Buyout Auction & Pro-Rata Burn**: Any buyer can initiate a competitive buyout auction with native USDC (`msg.value`) $\ge$ `reservePrice`. Features a 3-day countdown with 15-minute anti-sniping extensions, pull-over-push refund withdrawals (`withdrawPendingFunds()`), and trustless pro-rata payout claiming via `burnAndClaim()`.
+
+---
+
+## System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Frontend["Web Application (Next.js 16 App Router)"]
+        UI["Modern Web3 UI (Tailwind v4 + shadcn preset b2WzGlo5Q)"]
+        WC["Wallet Connect & SIWE Auth Modal"]
+        WAGMI["Wagmi Viem Hooks (Arc Testnet 5042002 / Mainnet 5042)"]
+    end
+
+    subgraph Backend["API & Auth Services (@frag-arc/api, @frag-arc/auth, @frag-arc/db)"]
+        TRPC["tRPC v11 Options Proxy"]
+        BA["Better-Auth + SIWE Plugin (Viem Signature Verification)"]
+        DB[(PostgreSQL + Drizzle ORM)]
+    end
+
+    subgraph ArcBlockchain["Arc Network (Osaka EVM L1 • Native USDC Gas)"]
+        FACTORY["NFTVaultFactory.sol"]
+        VAULT["NFTVault.sol (Escrow & Buyout Auction)"]
+        TOKEN["FractionToken.sol (ERC-20 Burnable)"]
+        NFT["MockArcNFT / Any ERC-721 / ERC-1155"]
+    end
+
+    UI --> WAGMI
+    UI --> TRPC
+    WC --> BA
+    BA --> DB
+    TRPC --> DB
+
+    WAGMI -->|Deploy Vault| FACTORY
+    FACTORY -->|Deploys| VAULT
+    FACTORY -->|Deploys| TOKEN
+    WAGMI -->|Deposit NFT| VAULT
+    WAGMI -->|Path 1: 100% Direct Redeem| VAULT
+    WAGMI -->|Path 2: Native USDC Bid| VAULT
+    WAGMI -->|Path 2: Burn & Claim USDC| VAULT
+    VAULT -->|vaultBurn| TOKEN
+    VAULT -->|Transfer NFT| UI
+```
+
+---
+
+## Arc Network Protocol Specifics Handled
+
+| Protocol Nuance | Arc Specification | Implementation in FragArc |
+| :--- | :--- | :--- |
+| **Native Gas & Value** | Native token is USDC with 18 decimals (`10^18` wei) | Bids, payouts, and gas fees utilize `msg.value` directly without wrapped ERC-20 approvals. |
+| **Gas Price Floor** | Protocol mempool rejects any tx with `maxFeePerGas < 20 Gwei` | Default gas floor constant `ARC_DEFAULT_GAS_FLOOR = 25 Gwei` configured across Hardhat, Wagmi, and frontend clients. |
+| **Zero Address Guard** | Native transfers to `address(0)` revert | Burn mechanism modifies internal balances without triggering native value transfers to `0x0`. |
+| **EVM Target** | Cancun / Osaka EVM compatibility | Hardhat compiler configured with `cancun` EVM target. |
+
+---
+
+## Tech Stack
+
+- **Smart Contracts**: Solidity 0.8.28, Hardhat, OpenZeppelin v5, Viem test harness.
+- **Frontend**: Next.js 16 (App Router, Turbopack), Tailwind CSS v4, shadcn/ui (preset `b2WzGlo5Q` with Rhea base, zinc base color, and violet theme).
+- **Web3 Connectivity**: Wagmi v2, Viem v2, Sign-In with Ethereum (SIWE).
+- **API & Data**: tRPC v11, Drizzle ORM, PostgreSQL.
+- **Authentication**: Better-Auth with cryptographic SIWE verification plugin.
+- **Monorepo**: Turborepo with Bun workspaces.
+
+---
 
 ## Getting Started
 
-First, install the dependencies:
+### 1. Install Dependencies
 
 ```bash
 bun install
 ```
 
-## Database Setup
-
-This project uses PostgreSQL with Drizzle ORM.
-
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/web/.env` file with your PostgreSQL connection details.
-
-3. Apply the schema to your database:
+### 2. Start PostgreSQL Database
 
 ```bash
-bun run db:push
+bun run db:start
 ```
 
-Then, run the development server:
+### 3. Run Database Migrations
 
 ```bash
-bun run dev
+bun run --cwd packages/db db:migrate
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the fullstack application.
-
-## UI Customization
-
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
-
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
-
-### Add more shared components
-
-Run this from the project root to add more primitives to the shared UI package:
+### 4. Run Smart Contract Tests
 
 ```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+bun run --cwd packages/contracts test
 ```
 
-Import shared components like this:
+### 5. Launch Development Server
 
-```tsx
-import { Button } from "@frag-arc/ui/components/button";
+```bash
+bun run dev:web
 ```
 
-### Add app-specific blocks
+Open [http://localhost:3001](http://localhost:3001) in your browser.
 
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
-
-## Environment Configuration
-
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
-
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
-
-Bun's automatic env loading is disabled in `bunfig.toml`; the framework integration or server bootstrap loads Varlock. Node deployments must include Varlock and its dependencies alongside the app schema.
-
-Run standalone Node/Bun tools that use Varlock from the owning app directory so they load that app's schema and env files. `env:generate` only generates TypeScript files; it does not initialize environment values in a subsequent command.
-
-## Deployment
-
-### Docker Compose
-
-- Target: web + server
-- Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
-- Build images: bun run docker:build
-- Start: bun run docker:up
-- Logs: bun run docker:logs
-- Stop: bun run docker:down
-
-Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
-
-For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
+---
 
 ## Project Structure
 
 ```
 frag-arc/
 ├── apps/
-│   └── web/         # Fullstack application (Next.js)
+│   └── web/                # Next.js 16 App Router frontend
+│       ├── public/         # FragArc logo, favicons, manifests
+│       └── src/
+│           ├── app/        # Marketplace, Fractionalize, Vault Detail, Portfolio, Faucet
+│           ├── components/ # Branded FragArcLogo, WalletConnect, VaultCard
+│           └── lib/        # Arc chain definitions (5042002 / 5042), Wagmi client
 ├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   ├── api/         # API layer / business logic
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
+│   ├── contracts/          # NFTVaultFactory, NFTVault, FractionToken, MockArcNFT
+│   ├── ui/                 # Shared shadcn/ui components (preset b2WzGlo5Q)
+│   ├── api/                # tRPC routers (vaults, portfolio, faucet)
+│   ├── auth/               # Better-Auth SIWE plugin with Viem verification
+│   └── db/                 # Drizzle ORM schema, relations, and migrations
 ```
 
-## Available Scripts
+---
 
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:push`: Push schema changes to database
-- `bun run db:generate`: Generate database client/types
-- `bun run db:migrate`: Run database migrations
-- `bun run db:studio`: Open database studio UI
-- `cd apps/web && bun run generate-pwa-assets`: Generate PWA assets
-- `bun run docker:build`: Build the Docker Compose images
-- `bun run docker:up`: Build and start the Docker Compose stack
-- `bun run docker:logs`: Tail logs from the Docker Compose stack
-- `bun run docker:down`: Stop the Docker Compose stack
+## License
 
-## Better Auth Schema Generation
-
-After changing auth plugins or schema options, run `bun run auth:generate` from the project root. The script runs the Better Auth CLI through `varlock run` from the owning app directory, loading the auth instance from `src/services.ts`. Review the schema changes, then use your ORM's migration workflow to apply them.
+MIT
