@@ -52,9 +52,9 @@ export default function HomePage() {
   })();
 
   return (
-    <div className="flex flex-col gap-10 pb-16">
+    <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-10 pb-20">
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-b from-primary/5 via-background to-background p-8 md:p-14 text-center flex flex-col items-center gap-6">
+      <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-b from-primary/5 via-background to-background p-6 sm:p-10 md:p-14 text-center flex flex-col items-center gap-6">
         <FragArcLogo size="2xl" withGlow={true} className="mb-1" />
 
         <div className="flex items-center gap-2">

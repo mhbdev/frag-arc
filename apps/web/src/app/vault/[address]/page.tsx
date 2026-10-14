@@ -392,7 +392,7 @@ export default function VaultDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="py-24 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+      <div className="py-24 px-4 w-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
         <RefreshCw className="size-6 animate-spin text-primary" />
         <span className="text-xs font-mono">Loading vault details from Arc...</span>
       </div>
@@ -413,7 +413,7 @@ export default function VaultDetailPage() {
       : "0";
 
   return (
-    <div className="max-w-6xl mx-auto py-6 flex flex-col gap-8">
+    <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8 pb-16">
       {pendingRefund > 0n && (
         <Alert className="flex items-center justify-between rounded-2xl border-sky-500/30 bg-sky-500/10 text-sky-500">
           <div className="flex items-center gap-3">

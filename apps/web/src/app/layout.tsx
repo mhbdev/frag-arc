@@ -43,9 +43,9 @@ export default function RootLayout({
         <PwaRegistration />
 
         <Providers>
-          <div className="grid grid-rows-[auto_1fr] h-svh">
+          <div className="min-h-screen flex flex-col bg-background text-foreground">
             <Header />
-            {children}
+            <main className="flex-1 w-full">{children}</main>
           </div>
         </Providers>
       </body>

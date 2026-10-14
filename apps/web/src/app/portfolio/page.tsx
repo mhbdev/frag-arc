@@ -46,7 +46,7 @@ export default function PortfolioPage() {
 
   if (!isConnected) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center gap-4 text-center">
+      <div className="py-20 px-4 w-full flex flex-col items-center justify-center gap-4 text-center">
         <div className="p-4 rounded-2xl bg-muted/40 text-muted-foreground">
           <Wallet className="size-8" />
         </div>
@@ -61,7 +61,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-6 flex flex-col gap-8">
+    <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
       {/* Portfolio Header Banner */}
       <div className="p-6 md:p-8 rounded-3xl border border-border/60 bg-gradient-to-r from-card to-card/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">

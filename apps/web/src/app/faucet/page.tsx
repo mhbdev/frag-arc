@@ -107,7 +107,7 @@ export default function FaucetPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-6 flex flex-col gap-8">
+    <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
       {/* Header */}
       <div className="text-center flex flex-col gap-2">
         <FragArcLogo size="xl" withGlow={true} className="mx-auto mb-2" />
