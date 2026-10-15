@@ -50,11 +50,14 @@
     "auth:generate": "cd apps/web && bun run auth:generate"
   },
   "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "^10.8.1",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@frag-arc/config": "workspace:*",
+    "@types/http-proxy": "^1.17.17",
     "@types/node": "catalog:",
+    "http-proxy": "^1.18.1",
     "turbo": "^2.11.7",
     "typescript": "catalog:",
     "varlock": "catalog:"
